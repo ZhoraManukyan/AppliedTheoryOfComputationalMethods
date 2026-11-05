@@ -81,4 +81,12 @@ class FaddeevLeverrierTest {
         assertEquals(listOf(1, 2), steps.map { it.k })
         steps.forEach { assertEquals(it.trace / it.k, it.c, 1e-12) }
     }
+
+    @Test
+    fun formattedPolynomialHasCorrectSigns() {
+        // diag(2, 3): det(λI − A) = λ² − 5λ + 6
+        val a = arrayOf(doubleArrayOf(2.0, 0.0), doubleArrayOf(0.0, 3.0))
+
+        assertEquals("λ^2 - 5.0λ + 6.0", FaddeevLeverrier.formatPolynomial(coefficients(a)))
+    }
 }

@@ -128,7 +128,7 @@ object NewtonPolynomialBuilder {
             terms.add(term)
         }
 
-        return terms.joinToString(" + ")
+        return terms.joinToString(" + ").replace("+ -", "- ")
     }
 
     private fun format(value: Double): String {

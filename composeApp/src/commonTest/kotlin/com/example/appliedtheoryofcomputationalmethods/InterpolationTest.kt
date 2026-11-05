@@ -131,4 +131,13 @@ class InterpolationTest {
         assertEquals("8.65", form[0])
         assertEquals("-72 * (x - 0.115)", form[1])
     }
+
+    @Test
+    fun negativeCoefficientsAreShownWithMinus() {
+        // Newton screen: expanded polynomial must not contain "+ -"
+        val expanded = NewtonPolynomialBuilder.polyToString(NewtonPolynomialBuilder.expand(tableNodes))
+
+        assertEquals(false, expanded.contains("+ -"))
+        assertEquals("-666666.67x^4 + 340000x^3 - 64383.33x^2 + 5301.5x - 150.05", expanded)
+    }
 }

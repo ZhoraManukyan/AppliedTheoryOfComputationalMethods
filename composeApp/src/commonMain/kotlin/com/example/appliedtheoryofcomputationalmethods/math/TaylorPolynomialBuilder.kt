@@ -43,7 +43,7 @@ object TaylorPolynomialBuilder {
             terms.add(term)
         }
 
-        return "P(x) = " + terms.joinToString(" + ")
+        return "P(x) = " + terms.joinToString(" + ").replace("+ -", "- ")
     }
 
     // ------------------------
@@ -98,7 +98,7 @@ object TaylorPolynomialBuilder {
             terms.add(term)
         }
 
-        return terms.joinToString(" + ")
+        return terms.joinToString(" + ").replace("+ -", "- ")
     }
 
     private fun Double.pow(p: Int): Double {
@@ -128,7 +128,7 @@ object TaylorPolynomialBuilder {
             terms.add(term)
         }
 
-        return "P(x) = " + terms.joinToString(" + ")
+        return "P(x) = " + terms.joinToString(" + ").replace("+ -", "- ")
     }
 
     private fun factorial(n: Int): Double =

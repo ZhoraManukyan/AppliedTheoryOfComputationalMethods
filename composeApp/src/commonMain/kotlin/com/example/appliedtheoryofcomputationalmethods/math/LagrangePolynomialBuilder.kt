@@ -150,7 +150,7 @@ object LagrangePolynomialBuilder {
             terms.add(term)
         }
 
-        return "L(x) = " + terms.joinToString(" + ")
+        return "L(x) = " + terms.joinToString(" + ").replace("+ -", "- ")
     }
 
     private fun expand(points: List<Pair<Double, Double>>): DoubleArray {
@@ -212,7 +212,7 @@ object LagrangePolynomialBuilder {
             terms.add(term)
         }
 
-        return terms.joinToString(" + ")
+        return terms.joinToString(" + ").replace("+ -", "- ")
     }
 
     private fun format(value: Double): String {

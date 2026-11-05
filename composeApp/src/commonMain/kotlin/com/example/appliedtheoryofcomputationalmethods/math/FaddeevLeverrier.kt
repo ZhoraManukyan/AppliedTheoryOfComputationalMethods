@@ -84,9 +84,10 @@ object FaddeevLeverrier {
 
         terms.add("λ^$n")
 
+        // det(λI − A) = λ^n − c₁λ^(n−1) − … − cₙ, because c_k = tr(A_k) / k is taken without a minus
         for (i in coeffs.indices) {
             val power = n - i - 1
-            val c = coeffs[i]
+            val c = -coeffs[i]
 
             val term = when (power) {
                 0 -> format3(c)
