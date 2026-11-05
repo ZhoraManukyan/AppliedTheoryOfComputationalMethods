@@ -1,145 +1,266 @@
 package com.example.appliedtheoryofcomputationalmethods.ui
 
-import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateListOf
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.example.appliedtheoryofcomputationalmethods.math.LagrangePolynomialBuilder
+import com.example.appliedtheoryofcomputationalmethods.utils.format3
+import com.example.appliedtheoryofcomputationalmethods.utils.parseAllDoubles
 import com.example.appliedtheoryofcomputationalmethods.viewmodel.InterpolationViewModel
+
+private const val LagrangeNodesMin = 2
+private const val LagrangeNodesMax = 10
 
 @Composable
 fun LagrangeScreen(onBack: () -> Unit) {
-
     val vm = remember { InterpolationViewModel() }
 
-    // X
-    var x0 by remember { mutableStateOf("0") }
-    var x1 by remember { mutableStateOf("0.5") }
-    var x2 by remember { mutableStateOf("1") }
-    var x3 by remember { mutableStateOf("1.5") }
-    var x4 by remember { mutableStateOf("2") }
+    val xs = remember { mutableStateListOf("0", "0.5", "1", "1.5", "2") }
+    val ys = remember { mutableStateListOf("1", "3.75", "20", "76", "213") }
 
-    // Y
-    var f0 by remember { mutableStateOf("1") }
-    var f1 by remember { mutableStateOf("3.75") }
-    var f2 by remember { mutableStateOf("20") }
-    var f3 by remember { mutableStateOf("76") }
-    var f4 by remember { mutableStateOf("213") }
-
-    var simplified by remember { mutableStateOf(listOf<String>()) }
+    var simplifiedProducts by remember { mutableStateOf(listOf<String>()) }
     var expanded by remember { mutableStateOf("") }
+    var sumSymbolic by remember { mutableStateOf("") }
+    var sumNumericDenom by remember { mutableStateOf("") }
+    val notebookTerms = remember { mutableStateListOf<LagrangePolynomialBuilder.NotebookTerm>() }
+    var error by remember { mutableStateOf<String?>(null) }
 
-    // 💥 ДРОБИ
-    val fractions = remember { mutableStateListOf<Triple<String, String, Double>>() }
+    MethodScreenScaffold(
+        title = "Интерполяция Лагранжа",
+        subtitle = "Многочлен, проходящий через заданные узлы",
+        onBack = onBack,
+    ) {
+        error?.let { ErrorBanner(it) { error = null } }
 
-    LazyColumn(modifier = Modifier.padding(16.dp)) {
-
-        item { Text("Лагранж") }
-
-        item { Spacer(modifier = Modifier.height(16.dp)) }
-
-        item { Text("X значения") }
-        item { OutlinedTextField(x0, { x0 = it }, label = { Text("x0") }) }
-        item { OutlinedTextField(x1, { x1 = it }, label = { Text("x1") }) }
-        item { OutlinedTextField(x2, { x2 = it }, label = { Text("x2") }) }
-        item { OutlinedTextField(x3, { x3 = it }, label = { Text("x3") }) }
-        item { OutlinedTextField(x4, { x4 = it }, label = { Text("x4") }) }
-
-        item { Spacer(modifier = Modifier.height(16.dp)) }
-
-        item { Text("f(x) значения") }
-        item { OutlinedTextField(f0, { f0 = it }, label = { Text("f(x0)") }) }
-        item { OutlinedTextField(f1, { f1 = it }, label = { Text("f(x1)") }) }
-        item { OutlinedTextField(f2, { f2 = it }, label = { Text("f(x2)") }) }
-        item { OutlinedTextField(f3, { f3 = it }, label = { Text("f(x3)") }) }
-        item { OutlinedTextField(f4, { f4 = it }, label = { Text("f(x4)") }) }
-
-        item { Spacer(modifier = Modifier.height(16.dp)) }
-
-        item {
-            Button(onClick = {
-
-                val xs = listOf(
-                    x0.toDouble(),
-                    x1.toDouble(),
-                    x2.toDouble(),
-                    x3.toDouble(),
-                    x4.toDouble()
-                )
-
-                val ys = listOf(
-                    f0.toDouble(),
-                    f1.toDouble(),
-                    f2.toDouble(),
-                    f3.toDouble(),
-                    f4.toDouble()
-                )
-
-                val simple = LagrangePolynomialBuilder.buildSimplified(xs.zip(ys))
-                simplified = simple
-
-                // 🔥 дроби
-                fractions.clear()
-                fractions.addAll(
-                    LagrangePolynomialBuilder.buildFractions(xs.zip(ys))
-                )
-
-                // раскрытый
-                val (_, exp) = vm.buildLagrangeFromInput(xs, ys)
-                expanded = exp
-
-            }) {
-                Text("Построить")
-            }
+        Section(
+            title = "Узлы интерполяции",
+            subtitle = "Пар узлов: ${xs.size}. Координаты x должны быть попарно различны.",
+        ) {
+            CountStepperRow(
+                label = "Число узлов",
+                count = xs.size,
+                range = LagrangeNodesMin..LagrangeNodesMax,
+                onDecrement = {
+                    if (xs.size > LagrangeNodesMin) {
+                        xs.removeAt(xs.lastIndex)
+                        ys.removeAt(ys.lastIndex)
+                    }
+                },
+                onIncrement = {
+                    if (xs.size < LagrangeNodesMax) {
+                        xs.add("0")
+                        ys.add("0")
+                    }
+                },
+            )
+            Spacer(Modifier.height(12.dp))
+            Text(
+                "Координаты x",
+                fontSize = 12.sp,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(bottom = 6.dp),
+            )
+            RowInputs(xs, { i, v -> xs[i] = v }, "x")
+            Spacer(Modifier.height(14.dp))
+            Text(
+                "Значения f(xᵢ)",
+                fontSize = 12.sp,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(bottom = 6.dp),
+            )
+            RowInputs(ys, { i, v -> ys[i] = v }, "f")
         }
 
-        item { Spacer(modifier = Modifier.height(16.dp)) }
+        HintText(
+            "Запись как в тетради: сначала дроби с произведениями в числителе и знаменателе, " +
+                    "затем численный знаменатель, затем коэффициент при произведении (x−xⱼ), и в конце — раскрытый L(x).",
+        )
 
-        // 🔥 ВЫВОД КАК В ТЕТРАДИ
-        item { Text("Нераскрытый:") }
+        PrimaryButton("Построить многочлен") {
+            error = null
+            val x = xs.parseAllDoubles()
+            val y = ys.parseAllDoubles()
+            if (x == null || y == null) {
+                error = "Проверьте все поля: нужны действительные числа."
+                return@PrimaryButton
+            }
+            if (x.toSet().size != x.size) {
+                error = "Координаты x должны быть разными."
+                return@PrimaryButton
+            }
+            val points = x.zip(y)
+            notebookTerms.clear()
+            notebookTerms.addAll(LagrangePolynomialBuilder.buildNotebookTerms(points))
+            sumSymbolic = LagrangePolynomialBuilder.buildNotebookSumEquation(points)
+            sumNumericDenom =
+                LagrangePolynomialBuilder.buildNotebookSumWithNumericDenominators(points)
+            simplifiedProducts = LagrangePolynomialBuilder.buildNotebookSimplifiedProducts(points)
+            val (_, exp) = vm.buildLagrangeFromInput(x, y)
+            expanded = exp
+        }
 
-        items(fractions.size) { i ->
-
-            val (num, den, y) = fractions[i]
-
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                modifier = Modifier.padding(vertical = 8.dp)
+        if (notebookTerms.isNotEmpty()) {
+            val m = notebookTerms.size - 1
+            Section(
+                title = "Обозначение",
+                subtitle = "Для ${notebookTerms.size} узлов получается многочлен степени $m: " +
+                        LagrangePolynomialBuilder.lagrangePolynomialLabel(notebookTerms.size) + ".",
             ) {
-
-                FractionView(
-                    numerator = num,
-                    denominator = den
+                Text(
+                    text = "L_$m(x) = f₀·ℓ₀(x) + f₁·ℓ₁(x) + … + f_${m}·ℓ_$m(x), " +
+                            "где ℓᵢ(x) = Π_{j≠i} (x−xⱼ)/(xᵢ−xⱼ).",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    lineHeight = 18.sp,
                 )
-
-                Spacer(modifier = Modifier.width(8.dp))
-
-                Text("* $y")
             }
 
-            Spacer(modifier = Modifier.height(12.dp))
+            Section(
+                title = "Полная сумма (знаменатель — произведения)",
+                subtitle = "Как в тетради: каждое слагаемое fᵢ·(Π(x−xⱼ))/(Π(xᵢ−xⱼ)).",
+            ) {
+                ScrollableMathLine(sumSymbolic)
+            }
+
+            Section(
+                title = "Та же сумма с численным знаменателем",
+                subtitle = "После вычисления Π(xᵢ−xⱼ) для каждого i.",
+            ) {
+                ScrollableMathLine(sumNumericDenom)
+            }
+
+            Section(
+                title = "Слагаемые по узлам",
+                subtitle = "Дробь, численное значение знаменателя и вид cᵢ·Π(x−xⱼ).",
+            ) {
+                notebookTerms.forEachIndexed { index, term ->
+                    LagrangeNotebookTermBlock(term)
+                    if (index < notebookTerms.lastIndex) {
+                        Spacer(Modifier.height(12.dp))
+                        HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+                        Spacer(Modifier.height(12.dp))
+                    }
+                }
+            }
         }
-        item { Spacer(modifier = Modifier.height(12.dp)) }
 
-        item { Text("Упрощенный:") }
-        items(simplified.size) { i ->
-            Text(simplified[i])
+        if (simplifiedProducts.isNotEmpty()) {
+            Section(
+                title = "Упрощённые слагаемые",
+                subtitle = "cᵢ = fᵢ / Π(xᵢ−xⱼ); дальше можно раскрыть скобки и привести подобные.",
+            ) {
+                simplifiedProducts.forEachIndexed { index, term ->
+                    PolynomialDisplay(term)
+                    if (index < simplifiedProducts.lastIndex) Spacer(Modifier.height(6.dp))
+                }
+            }
         }
 
-        item { Spacer(modifier = Modifier.height(12.dp)) }
-
-        item { Text("Раскрытый:") }
-        item { Text(expanded) }
-
-        item { Spacer(modifier = Modifier.height(16.dp)) }
-
-        item {
-            Button(onClick = onBack) {
-                Text("Назад")
+        if (expanded.isNotEmpty()) {
+            Section(
+                title = "Раскрытый многочлен L(x)",
+                subtitle = "Стандартный вид по степеням x.",
+            ) {
+                PolynomialDisplay(expanded)
             }
         }
     }
+}
+
+@Composable
+private fun ScrollableMathLine(text: String) {
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .horizontalScroll(rememberScrollState()),
+    ) {
+        Text(
+            text = text,
+            fontSize = 13.sp,
+            fontWeight = FontWeight.Medium,
+            color = MaterialTheme.colorScheme.onSurface,
+            lineHeight = 18.sp,
+            modifier = Modifier.padding(vertical = 4.dp),
+        )
+    }
+}
+
+@Composable
+private fun LagrangeNotebookTermBlock(term: LagrangePolynomialBuilder.NotebookTerm) {
+    val i = term.index
+    Text(
+        text = "Узел i = $i:  x_$i = ${format3(term.xi)},  f_$i = ${format3(term.yi)}",
+        style = MaterialTheme.typography.labelLarge,
+        color = MaterialTheme.colorScheme.onSurface,
+        fontWeight = FontWeight.SemiBold,
+    )
+    Spacer(Modifier.height(8.dp))
+    Text(
+        text = "f_$i · ℓ_$i(x):",
+        style = MaterialTheme.typography.bodySmall,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+    )
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.Start,
+        modifier = Modifier
+            .fillMaxWidth()
+            .horizontalScroll(rememberScrollState())
+            .padding(top = 4.dp),
+    ) {
+        FractionView(term.numeratorStr, term.denominatorSymbolicStr, fontSize = 11.sp)
+        Text(
+            text = " · ${format3(term.yi)}",
+            fontSize = 13.sp,
+            color = MaterialTheme.colorScheme.onSurface,
+        )
+    }
+    Text(
+        text = "Произведение (x_$i−xⱼ) = ${format3(term.denominatorValue)}",
+        style = MaterialTheme.typography.bodySmall,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+        modifier = Modifier.padding(top = 8.dp),
+    )
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        modifier = Modifier
+            .fillMaxWidth()
+            .horizontalScroll(rememberScrollState())
+            .padding(top = 4.dp),
+    ) {
+        Text("⇔ ", fontSize = 13.sp, color = MaterialTheme.colorScheme.primary)
+        FractionView(term.numeratorStr, format3(term.denominatorValue), fontSize = 11.sp)
+        Text(
+            text = " · ${format3(term.yi)}",
+            fontSize = 13.sp,
+            color = MaterialTheme.colorScheme.onSurface,
+        )
+    }
+    Text(
+        text = "⇔ ${format3(term.coefficient)} · (${term.numeratorStr})",
+        fontSize = 13.sp,
+        fontWeight = FontWeight.Medium,
+        color = MaterialTheme.colorScheme.onSurface,
+        modifier = Modifier.padding(top = 8.dp),
+    )
 }
